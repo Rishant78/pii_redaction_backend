@@ -105,3 +105,23 @@ def test_organization_greedy_suffix_matching():
     res3 = types('XYZ Technologies Private Limited Limited')
     assert ('XYZ Technologies Private Limited Limited', PIIType.ORGANIZATION) in res3
     assert not any(v == 'XYZ Technologies' for v, t in res3)
+
+
+def test_address_multiline_pin():
+    text = "11/3, 11/4 and 11/5, Village Birdewadi\nChakan, Taluka-Khed\nPune - 410 501\nMaharashtra, India"
+    spans = detect_all(text)
+    assert len(spans) == 1
+    assert "11/3" in spans[0].text
+    assert "410 501" in spans[0].text
+
+def test_address_isolated_no_pin():
+    text = "11/3, 11/4 and 11/5, Village Birdewadi Chakan, Taluka-Khed"
+    spans = detect_all(text)
+    assert len(spans) == 1
+    assert spans[0].text == "11/3, 11/4 and 11/5, Village Birdewadi Chakan, Taluka-Khed"
+
+def test_address_gat_no_context():
+    text = "Sarthak Malvadkar is our Company Secretary and Compliance Officer. His contact details are as set forth below: Gat No. 11/3, 11/4, 11/5, Village Birdewadi"
+    spans = detect_all(text)
+    assert len(spans) == 1
+    assert spans[0].text == "Gat No. 11/3, 11/4, 11/5, Village Birdewadi"

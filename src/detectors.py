@@ -81,15 +81,18 @@ def detect_structured(text: str) -> list[Span]:
 
 def detect_addresses(text: str) -> list[Span]:
     spans=[]
-    
+    if len(text.strip()) < 150 and ADDRESS_HINTS.search(text):
+        if re.match(r'^\s*(?:[1-9][0-9]{0,3}[a-zA-Z]?/[0-9a-zA-Z]+|[1-9][0-9]{0,3}[a-zA-Z]?)\b', text):
+            spans.append(Span(0, len(text), text.strip(), PIIType.ADDRESS, 0.85, "short-isolated-address"))
+
     ADDRESS_PREFIX_STRIP = re.compile(
         r'^(?:The\s+|Our\s+)?(?:registered\s+office|corporate\s+office|manufacturing\s+facility|address)\s*'
         r'(?:of\s+(?:our\s+)?Company\s+)?'
         r'(?:is\s+)?(?:located\s+)?(?:at)?\s*[:\-]?\s*', re.I)
         
     ADDRESS_LABEL_RE = re.compile(
-        r'\b(?:Registered\s+Office|Corporate\s+Office|Manufacturing\s+Facility|Mailing\s+Address|Address)\s*(?:of\s+(?:our\s+)?Company\s+)?'
-        r'(?:\s*[:\-\n]\s*|\s+(?:is\s+)?(?:located|situated)\s+at\s+)',
+        r'\b(?:Registered\s+Office|Corporate\s+Office|Manufacturing\s+Facility|Mailing\s+Address|Address|Gat\s+No\.|Plot\s+No\.|Flat\s+No\.|House\s+No\.|Survey\s+No\.|Door\s+No\.)\s*(?:of\s+(?:our\s+)?Company\s+)?'
+        r'(?:\s*[:\-\n]\s*|\s+(?:is\s+)?(?:located|situated)\s+at\s+|\s+at\s+|\s+)',
         re.I
     )
 
@@ -109,12 +112,15 @@ def detect_addresses(text: str) -> list[Span]:
                 marker_hits.append((idx, marker))
         if marker_hits:
             idx, marker=max(marker_hits, key=lambda x:x[0])
-            start=window_start+idx+len(marker)
+            if marker.lower() in ("gat no.", "plot no.", "flat no.", "house no.", "survey no.", "door no."):
+                start=window_start+idx
+            else:
+                start=window_start+idx+len(marker)
         else:
             start=None
         if start is None:
             # Fall back to the latest sentence/line boundary in the local window.
-            candidates=[prefix.rfind(x) for x in (". ", "; ", "\n")]
+            candidates=[prefix.rfind(x) for x in (". ", "; ", "\n\n", ".\n")]
             boundary=max(candidates)
             start=window_start+boundary+2 if boundary>=0 else window_start
             
@@ -146,13 +152,18 @@ def detect_addresses(text: str) -> list[Span]:
             
     # 2. No-PIN Label-based logic
     for m in ADDRESS_LABEL_RE.finditer(text):
-        start = m.end()
+        label = m.group()
+        if re.search(r'\b(?:Gat|Plot|Flat|House|Survey|Door)\b', label, re.I):
+            start = m.start()
+        else:
+            start = m.end()
+            
         # skip if this is already inside a detected span
         if any(s.start <= start <= s.end for s in spans):
             continue
             
         window = text[start:start+250]
-        stop_re = re.compile(r'(?:;|\.\s|\n\n|\n?(?:Telephone|Tel|Phone|E-mail|Email|Website|Contact Person)\b)', re.I)
+        stop_re = re.compile(r'(?:;|(?<!\bNo)\.\s|\n\n|\n?(?:Telephone|Tel|Phone|E-mail|Email|Website|Contact Person)\b)', re.I)
         stop_m = stop_re.search(window)
         if stop_m:
             end = start + stop_m.start()
