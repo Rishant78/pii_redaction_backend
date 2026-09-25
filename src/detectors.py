@@ -232,6 +232,8 @@ def detect_contextual_people(text: str) -> list[Span]:
         "equity shares","equity share","offered shares","capital structure","company",
         "the company","our company","practicing company"
     }
+    
+    # Existing regex contexts
     for m in PERSON_CONTEXT_RE.finditer(text):
         for group_index in (1,2):
             candidate=m.group(group_index)
@@ -241,17 +243,59 @@ def detect_contextual_people(text: str) -> list[Span]:
             if len(candidate.split()) < 2: continue
             spans.append(Span(m.start(group_index),m.end(group_index),candidate,PIIType.PERSON,0.93,"high-confidence-context"))
 
-    # High-confidence first-page promoter heading. Later occurrences can be
-    # redacted through the global entity registry once these names are known.
+    # 1. Contact Person list context: Contact Person: Name 1 / Name 2
+    for m in re.finditer(r"Contact\s+Person\s*[:\-]?\s*([^\n;.]+)", text, re.I):
+        tail = m.group(1)
+        for nm in NAME_RE.finditer(tail):
+            c = nm.group()
+            if c.lower() not in generic and len(c.split()) >= 2:
+                spans.append(Span(m.start(1) + nm.start(), m.start(1) + nm.end(), c, PIIType.PERSON, 0.93, "contact-person-list"))
+
+    # 2. Transfer of shares: transfer of shares (by|to|from) NAME
+    for m in re.finditer(r"(?:transfer\s+of\s+(?:equity\s+)?shares\s+(?:by|to|from)|transferred\s+(?:by|to|from))\s+([^\n;.,]+)", text, re.I):
+        tail = m.group(1)
+        for nm in NAME_RE.finditer(tail):
+            if any(x in nm.group().lower() for x in ("huf", "trust", "limited", "company", "group", "bank", "ltd", "pvt")): continue
+            spans.append(Span(m.start(1) + nm.start(), m.start(1) + nm.end(), nm.group(), PIIType.PERSON, 0.93, "share-transfer"))
+
+    # 3. Consent from: consent (dated ... )?from NAME
+    for m in re.finditer(r"consent\s+(?:(?:letter\s+)?dated\s+[A-Za-z0-9\s,]+)?from\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})", text, re.I):
+        spans.append(Span(m.start(1), m.end(1), m.group(1), PIIType.PERSON, 0.93, "consent-from"))
+
+    # 4. "namely, NAME" or "being NAME"
+    for m in re.finditer(r"\b(?:namely|being)\s*,?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})", text, re.I):
+        if m.group(1).lower() not in generic:
+            spans.append(Span(m.start(1), m.end(1), m.group(1), PIIType.PERSON, 0.93, "namely-being"))
+
+    # 5. "Director", "Shareholder", "Promoter" list contexts:
+    for m in re.finditer(r"\b(?:Promoters?|Shareholders?|Directors?|Members?|Founders?|Individuals?)\s*(?:are|:|include|,)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}(?:\s*(?:,|and|/)\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})*)", text, re.I):
+        tail = m.group(1)
+        for nm in NAME_RE.finditer(tail):
+            spans.append(Span(m.start(1) + nm.start(), m.start(1) + nm.end(), nm.group(), PIIType.PERSON, 0.90, "role-list"))
+
+    # High-confidence first-page promoter heading.
     for marker in re.finditer(r"OUR\s+PROMOTERS\s*:", text):
         tail=text[marker.end():marker.end()+550]
         for nm in re.finditer(r"(?:\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){2,3}\b|\b[A-Z]{2,}(?:\s+[A-Z]{2,}){2,3}\b)", tail):
             candidate=nm.group()
             if any(x in candidate.lower() for x in ("family trust","private limited","industrial park")): continue
             spans.append(Span(marker.end()+nm.start(),marker.end()+nm.end(),candidate,PIIType.PERSON,0.95,"promoter-heading"))
+            
     for m in PERSON_TITLE_LIST_RE.finditer(text):
         candidate=m.group(1).strip()
         spans.append(Span(m.start(1),m.end(1),candidate,PIIType.PERSON,0.91,"title-list"))
+
+    # 6. Isolated exact names in cells
+    if NAME_RE.fullmatch(text):
+        GENERIC_CELL_WORDS = {'The','Our','Your','Total','Amount','Rs','Rupees','Equity','Share','Face','Value','Issue','Price','Premium','Discount','Offer','Sale','Net','Gross','Company','Office','Corporate','Registered','Maharashtra','India','Private','Limited','Public','Trust','Huf','Bank','Group','Committee','Offender','Tension','Factor','Branch','Slip','Date','Obligations','Ratio','Restaurants','Advice','Agreement','Centres','Portion','Measures','Form','Kilometers','Policy','Engineer','Rate','Time','Day','Electricals','Current','Application','Fund','Agreements','Accounts','Director','Engine','Authority','Scheme','Estimates','Intermediaries','Pipeline','Resources','Motors','Incentives','Foundation','Fees','Authorization','Voltaic','Shareholders','Agency','Companies','Plan','Dollars','Yojana','Lot','Wires','Sector','Process','Facility','Goods','Cell','System','Act','Welfare','Commission','Directors','Duty','Locations','Government','Outlook','Trusts','Shareholder','Prospectus','Investor','Bidder','Statements','Details','Banks','Exchanges','Wheelers','Funds','Bill','Borrower','Defaulter','Entities','Task','Force','Gas','Monitoring','Members','Horsepower','Measure','Document','Kingdom','Account','Monetary','Laboratories','Vehicles', 'National', 'Central', 'High', 'Low', 'Continuous', 'Transposed', 'Conductors', 'Automated', 'Clearing', 'House', 'Identification', 'Number', 'Volume', 'Growth', 'Profit', 'After', 'Tax', 'Margin', 'Life', 'Insurance', 'Diesel', 'Generators', 'Standard', 'Magnet', 'Winding', 'Wire', 'Development', 'Finance', 'Institution', 'Promoter', 'Risk', 'Management', 'Fugitive', 'Economic', 'Electricity', 'Regulatory', 'Capacity', 'Utilization', 'Rajesh', 'Acknowledgement', 'Pricing', 'Renewable', 'Purchase', 'Fixed', 'Asset', 'Turnover', 'Designated', 'Quick', 'Service', 'Allotment', 'Underwriting', 'Bidding', 'Mutual', 'Stakeholders', 'Relationship', 'Graded', 'Surveillance', 'Revision', 'Circuit', 'Independent', 'Chartered', 'Compound', 'Annual', 'Indian', 'Working', 'Voltage', 'Anchor', 'Alternate', 'Investment', 'Free', 'Trade', 'Escrow', 'Managing', 'Combustion', 'Integrated', 'First', 'Revised', 'Infrastructure', 'Production', 'Linked', 'Advance', 'Fuel', 'Supply', 'Photo', 'Selling', 'International', 'Energy', 'United', 'States', 'Pradhan', 'Mantri', 'Awas', 'Bid', 'Syndicate', 'Power', 'Book', 'Building', 'Offered', 'Supa', 'Sangeeta', 'Export', 'Promotion', 'Capital', 'Advanced', 'Chemistry', 'Battery', 'Storage', 'Retail', 'Labour', 'Electrotechnical', 'Broker', 'Basic', 'Custom', 'Specified', 'State', 'Monetization', 'World', 'Financial', 'Reporting', 'Standards', 'Rakhi', 'Abridged', 'Rohit', 'Sunil', 'Parents', 'Revamped', 'Distribution', 'Restated', 'Brushless', 'Demographic', 'Sponsor', 'Three', 'Depositories', 'Fraudulent', 'Wilful', 'Education', 'Information', 'Automotive', 'Joint', 'Liquid', 'Propane', 'Second', 'Fractional', 'Additional', 'General', 'Four', 'Audit', 'Agreement', 'Refund', 'Factories', 'Specialised', 'Registrar'}
+        words = set(text.split())
+        if not words.intersection(GENERIC_CELL_WORDS) and len(words) >= 2:
+            spans.append(Span(0, len(text), text, PIIType.PERSON, 0.90, "isolated-exact-name"))
+            
+    # Also catch "Sangeeta Ramprasad Rai, her spouse"
+    for m in re.finditer(r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}),\s+(?:her|his)\s+(?:spouse|children|husband|wife|son|daughter|brother|sister|father|mother)", text):
+        spans.append(Span(m.start(1), m.end(1), m.group(1), PIIType.PERSON, 0.93, "spouse-relative"))
+
     return spans
 
 
