@@ -11,7 +11,7 @@ PHONE_RE = re.compile(r"(?<![\w])(?:\+\s?\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?
 DATE_RE = re.compile(r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*,?\s+\d{4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},?\s+\d{4})\b", re.I)
 PIN_RE = re.compile(r"\b[1-9]\d{2}\s?\d{3}\b")
 
-CORP_SUFFIX_RE = re.compile(r"\b[A-Z][A-Za-z0-9&’/-]*(?:\s+(?:[A-Z][A-Za-z0-9&’/-]*|and|of|the)){0,9}?\s+(?:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries)\b")
+CORP_SUFFIX_RE = re.compile(r"\b[A-Z][A-Za-z0-9&’/-]*(?:\s+(?:[A-Z][A-Za-z0-9&’/-]*|and|of|the)){0,9}?(?:\s+(?i:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries))+\b")
 TRUST_RE = re.compile(r"\b(?:[A-Z][A-Za-z0-9&.'’/-]*\s+){0,8}Family Trust\b")
 
 PERSON_CONTEXT_RE = re.compile(
@@ -175,7 +175,7 @@ def detect_addresses(text: str) -> list[Span]:
 def detect_organizations(text: str) -> list[Span]:
     spans=[]
     BAD_PREFIXES = re.compile(r"^(?:Formerly|Offer\s+Escrow\s+Collection\s+Bank|Escrow\s+Collection\s+Bank|Sponsor\s+Bank|Refund\s+Bank|Syndicate\s+Member|Lead\s+Manager|BRLM|Registrar)\s+", re.I)
-    SUFFIX_PATTERN = re.compile(r'\s+(?:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries)$', re.I)
+    SUFFIX_PATTERN = re.compile(r'(?:\s+(?:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries))+$', re.I)
     
     for pattern in (CORP_SUFFIX_RE, TRUST_RE):
         for m in pattern.finditer(text):

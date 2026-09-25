@@ -91,3 +91,17 @@ def test_address_negative_prose():
     # Has locations "Mumbai" and "Pune" but no address indicators
     res = types(text)
     assert not any(t == PIIType.ADDRESS for _, t in res)
+
+def test_organization_greedy_suffix_matching():
+    # Suffixes should be greedily matched to avoid leaving trailing duplicates
+    res = types('Hindalco Industries Limited')
+    assert ('Hindalco Industries Limited', PIIType.ORGANIZATION) in res
+    assert not any(v == 'Hindalco Industries' for v, t in res)
+    
+    res2 = types('Vertex Advisory LLP Limited Limited Limited')
+    assert ('Vertex Advisory LLP Limited Limited Limited', PIIType.ORGANIZATION) in res2
+    assert not any(v == 'Vertex Advisory LLP' for v, t in res2)
+    
+    res3 = types('XYZ Technologies Private Limited Limited')
+    assert ('XYZ Technologies Private Limited Limited', PIIType.ORGANIZATION) in res3
+    assert not any(v == 'XYZ Technologies' for v, t in res3)

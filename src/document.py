@@ -25,7 +25,7 @@ def generate_org_aliases(full_name: str) -> list[str]:
     if normalized != full_name:
         aliases.append(normalized)
     
-    suffix_pattern = re.compile(r'\s+(?:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries)$', re.I)
+    suffix_pattern = re.compile(r'(?:\s+(?:Limited|Ltd\.?|Private Limited|Pvt\.?\s+Ltd\.?|LLP|L\.L\.P\.|Corporation|Inc\.?|Incorporated|Holdings|Industries))+$', re.I)
     without_suffix = suffix_pattern.sub('', normalized)
     if without_suffix != normalized and len(without_suffix.split()) >= 2:
         aliases.append(without_suffix)
