@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+:root {
+  --background: #ffffff; /* pure white for a cleaner enterprise look */
+  --foreground: #09090b; /* zinc-950 */
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  background-image: radial-gradient(#e4e4e7 1px, transparent 1px);
+  background-size: 24px 24px;
+}
