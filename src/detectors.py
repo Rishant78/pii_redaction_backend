@@ -320,5 +320,59 @@ def detect_all(text: str) -> list[Span]:
     spans += detect_structured(text)
     spans += detect_addresses(text)
     spans += detect_organizations(text)
-    spans += detect_contextual_people(text)
+    
+    person_spans = detect_contextual_people(text)
+    valid_person_spans = []
+    
+    blocked_words = {'equity','share','shares','face','value','price','cash','offer','premium',
+        'public','details','issue','size','book','running','lead','type','company',
+        'limited','private','trust','huf','bank','group','committee','offender','tension',
+        'factor','branch','slip','date','obligations','ratio','restaurants','advice',
+        'agreement','centres','portion','measures','form','kilometers','policy','engineer',
+        'rate','time','day','electricals','current','application','fund','agreements',
+        'accounts','director','engine','authority','scheme','estimates','intermediaries',
+        'pipeline','resources','motors','incentives','foundation','fees','authorization',
+        'voltaic','shareholders','agency','companies','plan','dollars','yojana','lot',
+        'wires','sector','process','facility','goods','cell','system','act','welfare',
+        'commission','directors','duty','locations','government','outlook','trusts',
+        'shareholder','prospectus','investor','bidder','statements','banks','exchanges',
+        'wheelers','funds','bill','borrower','defaulter','entities','task','force',
+        'gas','monitoring','members','horsepower','measure','document','kingdom','account',
+        'monetary','laboratories','vehicles', 'national', 'central', 'high', 'low',
+        'continuous', 'transposed', 'conductors', 'automated', 'clearing', 'house',
+        'identification', 'number', 'volume', 'growth', 'profit', 'after', 'tax', 'margin',
+        'life', 'insurance', 'diesel', 'generators', 'standard', 'magnet', 'winding', 'wire',
+        'development', 'finance', 'institution', 'promoter', 'risk', 'management', 'fugitive',
+        'economic', 'electricity', 'regulatory', 'capacity', 'utilization', 'acknowledgement',
+        'pricing', 'renewable', 'purchase', 'fixed', 'asset', 'turnover', 'designated', 'quick',
+        'service', 'allotment', 'underwriting', 'bidding', 'mutual', 'stakeholders', 'relationship',
+        'graded', 'surveillance', 'revision', 'circuit', 'independent', 'chartered', 'compound',
+        'annual', 'indian', 'working', 'voltage', 'anchor', 'alternate', 'investment', 'free',
+        'trade', 'escrow', 'managing', 'combustion', 'integrated', 'first', 'revised',
+        'infrastructure', 'production', 'linked', 'advance', 'fuel', 'supply', 'photo', 'selling',
+        'international', 'energy', 'united', 'states', 'pradhan', 'mantri', 'awas', 'bid',
+        'syndicate', 'power', 'building', 'offered', 'export', 'promotion', 'capital', 'advanced',
+        'chemistry', 'battery', 'storage', 'retail', 'labour', 'electrotechnical', 'broker',
+        'basic', 'custom', 'specified', 'state', 'monetization', 'world', 'financial', 'reporting',
+        'standards', 'abridged', 'revamped', 'distribution', 'restated', 'brushless', 'demographic',
+        'sponsor', 'three', 'depositories', 'fraudulent', 'wilful', 'education', 'information',
+        'automotive', 'joint', 'liquid', 'propane', 'second', 'fractional', 'additional', 'general',
+        'four', 'audit', 'refund', 'factories', 'specialised', 'registrar', 'made', 'sale'}
+    
+    stop_words = {'of', 'the', 'to', 'at', 'and', 'for', 'in', 'on', 'with', 'by'}
+
+    for s in person_spans:
+        words = [w.strip(".,;:()'") for w in s.text.lower().split()]
+        is_valid = True
+        for w in words:
+            if w in blocked_words or w in stop_words:
+                is_valid = False
+                break
+        
+        if is_valid:
+            valid_person_spans.append(s)
+            
+    spans += valid_person_spans
     return merge_and_resolve(spans)
+
+
