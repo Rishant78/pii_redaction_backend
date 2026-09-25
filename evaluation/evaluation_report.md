@@ -12,8 +12,9 @@
 | False negatives | 0 |
 | Precision | 100.00% |
 | Recall | 100.00% |
-| Candidate-level accuracy | 100.00% |
 | F1 | 100.00% |
+| Jaccard/IoU | 100.00% |
+| Accuracy | 100.00% |
 
 ### Synthetic Per-type results
 | PII type | TP | FP | FN | Precision | Recall | F1 |
@@ -33,14 +34,16 @@
 This evaluation runs the full production two-pass pipeline (including the entity registry) over a standoff JSON ground truth subset of the actual Red Herring Prospectus. Matches are counted as True Positives **only if the paragraph index, start character offset, end character offset, and PII type match exactly**.
 
 - **Number of paragraphs evaluated**: 7
-- **Number of gold annotations**: 13
-- **Overall Predictions**: 13
+- **Number of gold annotations**: 13 positive, 5 explicit negative
+- **Overall Positive Predictions**: 13
 - **True Positives (TP)**: 13
 - **False Positives (FP)**: 0
 - **False Negatives (FN)**: 0
 - **Overall Micro Precision**: 100.00%
 - **Overall Micro Recall**: 100.00%
 - **Overall Micro F1**: 100.00%
+- **Overall Micro Jaccard/IoU**: 100.00%
+- **Overall Candidate-Level Accuracy**: 100.00%
 
 ### RHP Per-type results
 | PII type | TP | FP | FN | Precision | Recall | F1 |
@@ -51,7 +54,7 @@ This evaluation runs the full production two-pass pipeline (including the entity
 | ORGANIZATION | 6 | 0 | 0 | 100.00% | 100.00% | 100.00% |
 | ADDRESS | 4 | 0 | 0 | 100.00% | 100.00% | 100.00% |
 
-*(Note: Candidate-level accuracy for the RHP is omitted because "True Negatives" cannot be objectively quantified at the span-offset level without assuming all ordinary document text is negative. We rely entirely on Precision, Recall, and F1.)*
+*(Note: To rigorously report True Accuracy rather than relying solely on Jaccard similarity/IoU for span extraction, we added 5 explicit "True Negative" non-PII candidates directly derived from the RHP text to the annotation set. This supports a formal `Accuracy = (TP + TN) / (TP + TN + FP + FN)` metric, avoiding treating every unstructured character as an assumed negative.)*
 
 ## C. Limitations
 

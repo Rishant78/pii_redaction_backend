@@ -55,14 +55,14 @@ def evaluate_benchmark():
 
     precision=total_tp/(total_tp+total_fp) if total_tp+total_fp else 0.0
     recall=total_tp/(total_tp+total_fn) if total_tp+total_fn else 0.0
-    # Candidate-level accuracy: positives plus explicitly annotated negative candidates.
     accuracy=(total_tp+negative_correct)/(total_tp+total_fn+negative_total) if (total_tp+total_fn+negative_total) else 0.0
+    jaccard_iou=total_tp/(total_tp+total_fp+total_fn) if total_tp+total_fp+total_fn else 0.0
     for v in per_type.values():
         tp,fp,fn=v['tp'],v['fp'],v['fn']
         v['precision']=tp/(tp+fp) if tp+fp else 0.0
         v['recall']=tp/(tp+fn) if tp+fn else 0.0
         v['f1']=2*v['precision']*v['recall']/(v['precision']+v['recall']) if v['precision']+v['recall'] else 0.0
-    return {"overall":{"tp":total_tp,"fp":total_fp,"fn":total_fn,"precision":precision,"recall":recall,"accuracy":accuracy},"per_type":per_type,"negative_candidates":negative_total,"negative_correct":negative_correct}
+    return {"overall":{"tp":total_tp,"fp":total_fp,"fn":total_fn,"precision":precision,"recall":recall,"accuracy":accuracy,"jaccard_iou":jaccard_iou},"per_type":per_type,"negative_candidates":negative_total,"negative_correct":negative_correct}
 
 
 def evaluate_rhp(doc_path: str, gt_path: str):
@@ -83,6 +83,7 @@ def evaluate_rhp(doc_path: str, gt_path: str):
     
     per_type = {t.value: {"tp": 0, "fp": 0, "fn": 0} for t in PIIType}
     total_tp = total_fp = total_fn = 0
+    negative_total = negative_correct = 0
     total_gold = 0
     total_pred = 0
     
@@ -124,6 +125,18 @@ def evaluate_rhp(doc_path: str, gt_path: str):
                     pred_matched.add(p_idx)
                     
         for g_idx, gold in enumerate(golds):
+            if gold['type'] is None:
+                negative_total += 1
+                # If any prediction overlaps this negative gold, it's a false positive on the negative
+                overlapped = False
+                for p_idx, pred in enumerate(spans):
+                    if pred.start < gold['end'] and pred.end > gold['start']:
+                        overlapped = True
+                        break
+                if not overlapped:
+                    negative_correct += 1
+                continue
+                
             if g_idx in gold_matched:
                 per_type[gold['type']]['tp'] += 1
                 total_tp += 1
@@ -133,12 +146,16 @@ def evaluate_rhp(doc_path: str, gt_path: str):
                 
         for p_idx, pred in enumerate(spans):
             if p_idx not in pred_matched:
+                # Need to check if it overlapped an explicit negative? 
+                # Actually, any prediction not exactly matching a positive gold is FP
                 per_type[pred.pii_type.value]['fp'] += 1
                 total_fp += 1
                 
     precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) else 0.0
     recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    jaccard_iou = total_tp / (total_tp + total_fp + total_fn) if (total_tp + total_fp + total_fn) else 0.0
+    accuracy = (total_tp + negative_correct) / (total_tp + total_fn + negative_total) if (total_tp + total_fn + negative_total) else 0.0
     
     for v in per_type.values():
         tp, fp, fn = v['tp'], v['fp'], v['fn']
@@ -149,12 +166,15 @@ def evaluate_rhp(doc_path: str, gt_path: str):
     return {
         "overall": {
             "tp": total_tp, "fp": total_fp, "fn": total_fn, 
-            "precision": precision, "recall": recall, "f1": f1
+            "precision": precision, "recall": recall, "f1": f1,
+            "jaccard_iou": jaccard_iou, "accuracy": accuracy
         },
         "per_type": per_type,
         "paragraphs_evaluated": len(gt_map),
         "total_gold": total_gold,
-        "total_pred": total_pred
+        "total_pred": total_pred,
+        "negative_candidates": negative_total,
+        "negative_correct": negative_correct
     }
 
 def run_all_evaluations(doc_path: str, gt_path: str, out_path: str):

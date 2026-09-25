@@ -14,3 +14,5 @@ frontend/out/
 frontend/.env*
 frontend/!.env*.example
 .vscode/
+
+.vercel
