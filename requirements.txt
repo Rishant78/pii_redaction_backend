@@ -1,0 +1,7 @@
+fastapi>=0.110,<1
+uvicorn[standard]>=0.29,<1
+python-docx>=1.1,<2
+python-multipart>=0.0.9,<1
+# Optional NER extension:
+# spacy>=3.7,<4
+# en_core_web_sm (install separately when network/model access is available)

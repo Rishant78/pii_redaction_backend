@@ -1,0 +1,11 @@
+{
+    "extraPaths": [
+        "."
+    ],
+    "exclude": [
+        "C:/Users/rikus/.gemini/antigravity-ide/brain/**"
+    ],
+    "ignore": [
+        "C:/Users/rikus/.gemini/antigravity-ide/brain/**"
+    ]
+}
