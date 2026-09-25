@@ -25,7 +25,7 @@ def health():
 
 @app.post("/analyze")
 async def analyze(file: UploadFile=File(...)):
-    if not file.filename.lower().endswith('.docx'):
+    if not file.filename or not file.filename.lower().endswith('.docx'):
         raise HTTPException(400,"Only .docx files are supported")
     with tempfile.TemporaryDirectory() as td:
         src=Path(td)/"input.docx"
@@ -34,7 +34,7 @@ async def analyze(file: UploadFile=File(...)):
 
 @app.post("/redact")
 async def redact(background_tasks: BackgroundTasks, file: UploadFile=File(...)):
-    if not file.filename.lower().endswith('.docx'):
+    if not file.filename or not file.filename.lower().endswith('.docx'):
         raise HTTPException(400,"Only .docx files are supported")
     td=tempfile.mkdtemp()
     
