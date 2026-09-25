@@ -91,8 +91,8 @@ def detect_addresses(text: str) -> list[Span]:
         r'(?:is\s+)?(?:located\s+)?(?:at)?\s*[:\-]?\s*', re.I)
         
     ADDRESS_LABEL_RE = re.compile(
-        r'\b(?:Registered\s+Office|Corporate\s+Office|Manufacturing\s+Facility|Mailing\s+Address|Address|Gat\s+No\.|Plot\s+No\.|Flat\s+No\.|House\s+No\.|Survey\s+No\.|Door\s+No\.)\s*(?:of\s+(?:our\s+)?Company\s+)?'
-        r'(?:\s*[:\-\n]\s*|\s+(?:is\s+)?(?:located|situated)\s+at\s+|\s+at\s+|\s+)',
+        r'\b(?:(?:Registered\s+Office|Corporate\s+Office|Manufacturing\s+Facility|Mailing\s+Address|Address)\s*(?:of\s+(?:our\s+)?Company\s+)?(?:\s*[:\-\n]\s*|\s+(?:is\s+)?(?:located|situated)\s+at\s+|\s+at\s+)'
+        r'|(?:Gat\s+No\.|Plot\s+No\.|Flat\s+No\.|House\s+No\.|Survey\s+No\.|Door\s+No\.)\s+)',
         re.I
     )
 

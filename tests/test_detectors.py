@@ -125,3 +125,9 @@ def test_address_gat_no_context():
     spans = detect_all(text)
     assert len(spans) == 1
     assert spans[0].text == "Gat No. 11/3, 11/4, 11/5, Village Birdewadi"
+
+
+def test_address_false_positive():
+    text = 'Registered office of our Company was shifted from the jurisdiction of Registrar of Companies, Maharashtra at Mumbai to the jurisdiction of the Registrar of Companies, Maharashtra at Pune, and a certificate of registration of the order of regional director confirming t'
+    types_found = [t for _, t in types(text)]
+    assert PIIType.ADDRESS not in types_found
